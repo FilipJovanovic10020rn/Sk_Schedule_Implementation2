@@ -137,7 +137,6 @@ public class Implementation2 implements ClassSchedule {
 
         int duration = 0;
 
-        Date toDate = null;
         Calendar calendar = Calendar.getInstance();
         calendar.setTime(date);
 
@@ -145,7 +144,6 @@ public class Implementation2 implements ClassSchedule {
             if(entry.getKey().getDate().equals(calendar.getTime()) && entry.getKey().getClassroom().getName().equals(classroomName)
                     && entry.getKey().getStartTime() == startTime && entry.getValue().getClassName().equals(lectureName)){
                 duration = entry.getValue().getDuration();
-                toDate = entry.getValue().getEndDate();
             }
         }
         if(duration==0)
@@ -173,7 +171,7 @@ public class Implementation2 implements ClassSchedule {
 
     @Override
     public void RescheduleClass(Schedule schedule, Date oldDate,Date oldToDate, int oldStartTime, String oldClassroomName, String lectureName, Date newDate,Date newToDate, int newStartTime, String newClassroomName)
-            throws WrongStartTimeException,DatesException, WrongDateException,WrongLectureNameException, ClassroomDoesntExistException, ClassLectureDoesntExistException{
+            throws WrongStartTimeException,DatesException, WrongDateException,WrongLectureNameException, ClassroomDoesntExistException, ClassLectureDoesntExistException, TermTakenException{
 
         if(schedule.getStartHours()>oldStartTime || schedule.getEndHours()<oldStartTime || schedule.getStartHours()>newStartTime || schedule.getEndHours()<newStartTime){
             throw new WrongStartTimeException("Vreme koje ste dali je van radnih sati");
@@ -194,11 +192,13 @@ public class Implementation2 implements ClassSchedule {
         if(!flag1 || !flag2)
             throw new ClassroomDoesntExistException("Ne postoji ucionica sa ovim parametrima");
 
+        if(oldDate.getTime()-oldToDate.getTime() >= newDate.getTime()-newToDate.getTime()){
+            throw new WrongDateException("Razmak izmedju novih datuma je mnogo mali");
+        }
+
         int count =0;
         int duration = 0;
         ClassLecture cl = null;
-        Date toDate;
-        Date oldToDate = null;
 
         boolean firstDate = false;
 
@@ -206,23 +206,17 @@ public class Implementation2 implements ClassSchedule {
         calendar.setTime(newDate);
 
         Calendar calendar2 = Calendar.getInstance();
-        calendar.setTime(oldDate);
-
-        toDate = schedule.getEndDate();
-
+        calendar2.setTime(oldDate);
 
         for(Map.Entry<Term,ClassLecture> entry : schedule.getScheduleMap().entrySet()){
             if(entry.getKey().getDate().equals(oldDate) && entry.getKey().getClassroom().getName().equals(oldClassroomName)
                     && entry.getKey().getStartTime() == oldStartTime && entry.getValue().getClassName().equals(lectureName)){
                 duration = entry.getValue().getDuration();
                 cl = entry.getValue();
-                oldToDate = entry.getValue().getEndDate();
             }
         }
 
-
-
-        while(calendar.getTime()!=toDate){
+        while(calendar.getTime()!=newToDate){
             count = 0;
             for(Map.Entry<Term,ClassLecture> entry : schedule.getScheduleMap().entrySet()){
                 for(int i =0 ;i<duration; i++){
@@ -241,21 +235,15 @@ public class Implementation2 implements ClassSchedule {
             }
             if(count!=duration && !firstDate)
             {
-                throw new TermDoesntExistException("ne postoji slobodan termin");
+                throw new TermTakenException("ne postoji slobodan termin");
             }
-            else if(count!=duration){
-                calendar.add(Calendar.DAY_OF_MONTH, -7);
-                toDate= calendar.getTime();
-                break;
-            }
-            firstDate = true;
             calendar.add(Calendar.DAY_OF_MONTH, 7);
         }
 
-        ClassLecture cl2 = new ClassLecture(lectureName, cl.getProfessor(), newStartTime, duration, newDate, toDate);
+        ClassLecture cl2 = new ClassLecture(lectureName, cl.getProfessor(), newStartTime, duration, newDate, newToDate);
         List<Term> termini = new ArrayList<>();
 
-        while(calendar.getTime()!=toDate){
+        while(calendar.getTime()!=newToDate){
             count = 0;
             for(Map.Entry<Term,ClassLecture> entry : schedule.getScheduleMap().entrySet()){
                 for(int i =0 ;i<duration; i++){
@@ -283,10 +271,10 @@ public class Implementation2 implements ClassSchedule {
             calendar.add(Calendar.DAY_OF_MONTH, 7);
         }
 
-        while(calendar.getTime()!=oldToDate){
+        while(calendar2.getTime()!=oldToDate){
             for(Map.Entry<Term,ClassLecture> entry : schedule.getScheduleMap().entrySet()){
                 for(int i = 0; i<duration; i++){
-                    if(entry.getKey().getDate().equals(calendar.getTime()) && entry.getKey().getClassroom().getName().equals(oldClassroomName)
+                    if(entry.getKey().getDate().equals(calendar2.getTime()) && entry.getKey().getClassroom().getName().equals(oldClassroomName)
                             && entry.getKey().getStartTime() == oldStartTime+i)
                     {
                         schedule.getScheduleMap().put(entry.getKey(),null);
