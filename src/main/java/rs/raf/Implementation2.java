@@ -5,17 +5,20 @@ import rs.raf.classes.Classroom;
 import rs.raf.classes.Schedule;
 import rs.raf.classes.Term;
 import rs.raf.exceptions.*;
+import rs.raf.schedule_management.ClassSchedule;
+import rs.raf.schedule_management.ScheduleManager;
+
 import java.util.*;
 
-public class Implementation2 {
+public class Implementation2 implements ClassSchedule {
 
-    //    static {
-//        ScheduleManager.registerClassScheduler(new Implementation1());
-//    }
-//    private Map<Term,ClassLecture> scheduleMap;
+    static {
+        ScheduleManager.registerClassScheduler(new Implementation2());
+    }
 
-    void createClass(Schedule schedule, int startTime, int duration, String classroomName, String lectureName, String professor, Date fromDate, Date toDate)
-            throws DatesException, DurationException, ClassroomDoesntExistException {
+    @Override
+    public void createClass(Schedule schedule, int startTime, int duration, String classroomName, String lectureName, String professor, Date fromDate, Date toDate)
+            throws DatesException,DurationException,ClassroomDoesntExistException,TermTakenException,WrongStartTimeException, InternalError{
 
         if(schedule.getStartHours()>startTime || schedule.getEndHours()<startTime){
             throw new WrongStartTimeException("Vreme koje ste dali je van radnih sati");
@@ -109,8 +112,13 @@ public class Implementation2 {
         }
     }
 
-    void RemoveClass(Schedule schedule,Date date, int startTime, String classroomName, String lectureName)
-            throws DatesException,DurationException,ClassroomDoesntExistException,WrongStartTimeException{
+
+
+
+
+    @Override
+    public void RemoveClass(Schedule schedule,Date date,Date toDate, int startTime, String classroomName, String lectureName)
+            throws DatesException,DurationException,ClassroomDoesntExistException,TermTakenException,WrongStartTimeException, InternalError{
 
         if(schedule.getStartHours()>startTime || schedule.getEndHours()<startTime){
             throw new WrongStartTimeException("Vreme koje ste dali je van radnih sati");
@@ -160,8 +168,12 @@ public class Implementation2 {
 
     }
 
-    void RescheduleClass(Schedule schedule, Date oldDate, int oldStartTime, String oldClassroomName, String lectureName, Date newDate, int newStartTime, String newClassroomName)
-            throws DatesException,ClassroomDoesntExistException,WrongStartTimeException{
+
+
+
+    @Override
+    public void RescheduleClass(Schedule schedule, Date oldDate,Date oldToDate, int oldStartTime, String oldClassroomName, String lectureName, Date newDate,Date newToDate, int newStartTime, String newClassroomName)
+            throws WrongStartTimeException,DatesException, WrongDateException,WrongLectureNameException, ClassroomDoesntExistException, ClassLectureDoesntExistException{
 
         if(schedule.getStartHours()>oldStartTime || schedule.getEndHours()<oldStartTime || schedule.getStartHours()>newStartTime || schedule.getEndHours()<newStartTime){
             throw new WrongStartTimeException("Vreme koje ste dali je van radnih sati");
