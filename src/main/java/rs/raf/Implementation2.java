@@ -20,7 +20,9 @@ public class Implementation2 implements ClassSchedule {
     public void createClass(Schedule schedule, int startTime, int duration, String classroomName, String lectureName, String professor, Date fromDate, Date toDate)
             throws DatesException,DurationException,ClassroomDoesntExistException,TermTakenException,WrongStartTimeException, InternalError{
 
-        System.out.println("hello");
+        if(fromDate.after(toDate)){
+            throw new DatesException("Pocetni datum je posle zavrsnog datuma");
+        }
         if(schedule.getStartHours()>startTime || schedule.getEndHours()<startTime){
             throw new WrongStartTimeException("Vreme koje ste dali je van radnih sati");
         }
@@ -140,6 +142,9 @@ public class Implementation2 implements ClassSchedule {
     public void RemoveClass(Schedule schedule,Date date,Date toDate, int startTime, String classroomName, String lectureName)
             throws DatesException,DurationException,ClassroomDoesntExistException,TermTakenException,WrongStartTimeException, InternalError{
 
+        if(date.after(toDate)){
+            throw new DatesException("Pocetni datum je posle zavrsnog datuma");
+        }
         if(schedule.getStartHours()>startTime || schedule.getEndHours()<startTime){
             throw new WrongStartTimeException("Vreme koje ste dali je van radnih sati");
         }
@@ -199,6 +204,13 @@ public class Implementation2 implements ClassSchedule {
     @Override
     public void RescheduleClass(Schedule schedule, Date oldDate,Date oldToDate, int oldStartTime, String oldClassroomName, String lectureName, Date newDate,Date newToDate, int newStartTime, String newClassroomName)
             throws WrongStartTimeException,DatesException, WrongDateException,WrongLectureNameException, ClassroomDoesntExistException, ClassLectureDoesntExistException, TermTakenException{
+
+        if(oldDate.after(oldToDate)){
+            throw new DatesException("Pocetni datum je posle zavrsnog datuma");
+        }
+        if(newDate.after(newToDate)){
+            throw new DatesException("Pocetni datum je posle zavrsnog datuma");
+        }
 
         if(schedule.getStartHours()>oldStartTime || schedule.getEndHours()<oldStartTime || schedule.getStartHours()>newStartTime || schedule.getEndHours()<newStartTime){
             throw new WrongStartTimeException("Vreme koje ste dali je van radnih sati");
