@@ -19,7 +19,7 @@ public class Main {
         //TODO IZBACI DRUGI DATUM IZ EXCEPTION U IMPLEMENTACIJI1
         List<Classroom> classrooms = new ArrayList<>();
         // nemoj null kao addons
-        classrooms.add(classSchedule.createClassroom(classrooms,"Ucionica",2, AddOns.PEN));
+        //classrooms.add(classSchedule.createClassroom(classrooms,"Ucionica",2, AddOns.PEN));
 
         SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy");
         Schedule schedule = null;
@@ -73,7 +73,7 @@ public class Main {
             Date newstartDate = dateFormat.parse("06.11.2023");
 
             Date newtoDate = dateFormat.parse("27.11.2023");
-            classSchedule.RescheduleClass(schedule,startDate,toDate,13,"Ucionica","SK",newstartDate,newtoDate,12,"Ucionica");
+            classSchedule.rescheduleClass(schedule,startDate,toDate,13,"Ucionica","SK",newstartDate,newtoDate,12,"Ucionica");
 
             termList = classSchedule.findTerms(schedule,startDate,2,true,"Ucionica");
 

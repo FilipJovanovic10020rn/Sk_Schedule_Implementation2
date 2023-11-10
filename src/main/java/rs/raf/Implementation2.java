@@ -139,7 +139,7 @@ public class Implementation2 implements ClassSchedule {
 
 
     @Override
-    public void RemoveClass(Schedule schedule,Date date,Date toDate, int startTime, String classroomName, String lectureName)
+    public void removeClass(Schedule schedule,Date date,Date toDate, int startTime, String classroomName, String lectureName)
             throws DatesException,DurationException,ClassroomDoesntExistException,TermTakenException,WrongStartTimeException, InternalError{
 
         if(date.after(toDate)){
@@ -202,7 +202,7 @@ public class Implementation2 implements ClassSchedule {
 
 
     @Override
-    public void RescheduleClass(Schedule schedule, Date oldDate,Date oldToDate, int oldStartTime, String oldClassroomName, String lectureName, Date newDate,Date newToDate, int newStartTime, String newClassroomName)
+    public void rescheduleClass(Schedule schedule, Date oldDate,Date oldToDate, int oldStartTime, String oldClassroomName, String lectureName, Date newDate,Date newToDate, int newStartTime, String newClassroomName)
             throws WrongStartTimeException,DatesException, WrongDateException,WrongLectureNameException, ClassroomDoesntExistException, ClassLectureDoesntExistException, TermTakenException{
 
         if(oldDate.after(oldToDate)){
