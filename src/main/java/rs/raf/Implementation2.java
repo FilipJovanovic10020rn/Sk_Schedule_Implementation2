@@ -20,6 +20,7 @@ public class Implementation2 implements ClassSchedule {
     public void createClass(Schedule schedule, int startTime, int duration, String classroomName, String lectureName, String professor, Date fromDate, Date toDate)
             throws DatesException,DurationException,ClassroomDoesntExistException,TermTakenException,WrongStartTimeException, InternalError{
 
+        System.out.println("hello");
         if(schedule.getStartHours()>startTime || schedule.getEndHours()<startTime){
             throw new WrongStartTimeException("Vreme koje ste dali je van radnih sati");
         }
@@ -49,7 +50,15 @@ public class Implementation2 implements ClassSchedule {
 
         boolean firstDate = false;
 
-        while(calendar.getTime()!=toDate){
+//        System.out.println(toDate);
+        while(true){
+            System.out.println("-");
+            System.out.println(toDate);
+            System.out.println(calendar.getTime());
+//            if((calendar.getTime()).equals(toDate)  || (calendar.getTime().after(toDate))){
+//                toDate = calendar.getTime();
+//                break;
+//            }
             count = 0;
             for(Map.Entry<Term, ClassLecture> entry : schedule.getScheduleMap().entrySet()){
                 for(int i =0 ;i<duration; i++){
@@ -77,13 +86,23 @@ public class Implementation2 implements ClassSchedule {
             }
             firstDate = true;
             calendar.add(Calendar.DAY_OF_MONTH, 7);
+            if(calendar.getTime().after(toDate)){
+                calendar.add(Calendar.DAY_OF_MONTH, -7);
+                toDate= calendar.getTime();
+                break;
+            }
+
         }
+
+
+        System.out.println(toDate);
 
 
         calendar.setTime(fromDate);
 
         ClassLecture cl = new ClassLecture(lectureName, professor, startTime, duration, fromDate, toDate);
-        while(calendar.getTime()!=toDate){
+
+        while (!(calendar.getTime().after(toDate))){
             count = 0;
             for(Map.Entry<Term,ClassLecture> entry : schedule.getScheduleMap().entrySet()){
                 for(int i =0 ;i<duration; i++){
@@ -109,6 +128,7 @@ public class Implementation2 implements ClassSchedule {
             }
             termini.clear();
             calendar.add(Calendar.DAY_OF_MONTH, 7);
+
         }
     }
 
@@ -144,6 +164,10 @@ public class Implementation2 implements ClassSchedule {
             if(entry.getKey().getDate().equals(calendar.getTime()) && entry.getKey().getClassroom().getName().equals(classroomName)
                     && entry.getKey().getStartTime() == startTime && entry.getValue().getClassName().equals(lectureName)){
                 duration = entry.getValue().getDuration();
+                if(toDate.after(entry.getValue().getEndDate())){
+                    toDate = entry.getValue().getEndDate();
+                }
+
             }
         }
         if(duration==0)
@@ -151,16 +175,19 @@ public class Implementation2 implements ClassSchedule {
             throw new ClassLectureDoesntExistException("ne postoji cas sa zadatim podacima");
         }
 
-        while(calendar.getTime()!=toDate){
+        System.out.println(calendar.getTime());
+        System.out.println(toDate);
+        while(!(calendar.getTime().after(toDate))){
             for(Map.Entry<Term,ClassLecture> entry : schedule.getScheduleMap().entrySet()){
                 for(int i = 0; i<duration; i++){
                     if(entry.getKey().getDate().equals(calendar.getTime()) && entry.getKey().getClassroom().getName().equals(classroomName)
-                            && entry.getKey().getStartTime() == startTime+i)
+                            && entry.getKey().getStartTime() == startTime+i && entry.getValue().getClassName().equals(lectureName))
                     {
                         schedule.getScheduleMap().put(entry.getKey(),null);
                     }
                 }
             }
+
             calendar.add(Calendar.DAY_OF_MONTH, 7);
         }
 
@@ -216,13 +243,15 @@ public class Implementation2 implements ClassSchedule {
             }
         }
 
-        while(calendar.getTime()!=newToDate){
+//        !(calendar.getTime().after(toDate))
+
+        while(!(calendar.getTime().after(newToDate))){
             count = 0;
             for(Map.Entry<Term,ClassLecture> entry : schedule.getScheduleMap().entrySet()){
                 for(int i =0 ;i<duration; i++){
                     if(entry.getKey().getDate().equals(calendar.getTime()) && entry.getKey().getClassroom().getName().equals(newClassroomName)
                             && entry.getKey().getStartTime() == newStartTime+i){
-                        if(entry.getValue()==null){
+                        if(entry.getValue()==null || entry.getValue().getClassName().equals(lectureName)){
                             count++;
                         }
                     }
@@ -240,10 +269,14 @@ public class Implementation2 implements ClassSchedule {
             calendar.add(Calendar.DAY_OF_MONTH, 7);
         }
 
+
+
         ClassLecture cl2 = new ClassLecture(lectureName, cl.getProfessor(), newStartTime, duration, newDate, newToDate);
         List<Term> termini = new ArrayList<>();
 
-        while(calendar.getTime()!=newToDate){
+        calendar.setTime(newDate);
+
+        while(!(calendar.getTime().after(newToDate))){
             count = 0;
             for(Map.Entry<Term,ClassLecture> entry : schedule.getScheduleMap().entrySet()){
                 for(int i =0 ;i<duration; i++){
@@ -271,18 +304,26 @@ public class Implementation2 implements ClassSchedule {
             calendar.add(Calendar.DAY_OF_MONTH, 7);
         }
 
-        while(calendar2.getTime()!=oldToDate){
+        System.out.println("hello");
+
+
+        while(!(calendar2.getTime().after(oldToDate))){
+
+            System.out.println(calendar2.getTime());
+            System.out.println(oldToDate);
             for(Map.Entry<Term,ClassLecture> entry : schedule.getScheduleMap().entrySet()){
                 for(int i = 0; i<duration; i++){
                     if(entry.getKey().getDate().equals(calendar2.getTime()) && entry.getKey().getClassroom().getName().equals(oldClassroomName)
-                            && entry.getKey().getStartTime() == oldStartTime+i)
+                            && entry.getKey().getStartTime() == oldStartTime+i && entry.getValue().getClassName().equals(lectureName))
                     {
                         schedule.getScheduleMap().put(entry.getKey(),null);
                     }
                 }
             }
-            calendar.add(Calendar.DAY_OF_MONTH, 7);
+
+            calendar2.add(Calendar.DAY_OF_MONTH, 7);
         }
+
 
     }
 }
