@@ -8,6 +8,9 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.opencsv.CSVWriter;
 import rs.raf.classes.ClassLecture;
 import rs.raf.classes.Classroom;
@@ -511,6 +514,30 @@ public class Implementation2 implements ClassSchedule {
     @Override
     public void importPDF(Schedule schedule, String filePath) {
 
+
+//        SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy");
+//
+//        Date startDate = dateFormat.parse(date);
+//        Date toDate = dateFormat.parse(todate);
+//        Calendar calendar = Calendar.getInstance();
+//        calendar.setTime(startDate);
+//
+//        ClassLecture cl = new ClassLecture(className,professor,startTime,duration,startDate,null);
+//
+//        while(!(calendar.getTime().after(toDate))){
+//            for(Map.Entry<Term,ClassLecture> entry : schedule.getScheduleMap().entrySet()){
+//                for(int i = 0; i<duration; i++){
+//                    if(entry.getKey().getDate().equals(calendar.getTime()) && entry.getKey().getClassroom().getName().equals(classroom)
+//                            && entry.getKey().getStartTime() == startTime+i)
+//                    {
+//                        schedule.getScheduleMap().put(entry.getKey(),cl);
+//                    }
+//                }
+//            }
+//
+//            calendar.add(Calendar.DAY_OF_MONTH, 7);
+//        }
+
     }
 
     @Override
@@ -539,6 +566,58 @@ public class Implementation2 implements ClassSchedule {
 
     @Override
     public void importJSON(Schedule schedule, String filePath) {
+
+        Gson gson = new Gson();
+
+
+        try (FileReader fileReader = new FileReader(filePath)) {
+            // Deserialize JSON data into JsonArray
+            JsonArray jsonArray = gson.fromJson(fileReader, JsonArray.class);
+
+            // Access the data
+            for (JsonElement jsonElement : jsonArray) {
+                JsonObject jsonObject = jsonElement.getAsJsonObject();
+
+                // Access lecture and Term objects dynamically
+                JsonObject lecture = jsonObject.getAsJsonObject("ClassLecture");
+                int duration = lecture.getAsJsonPrimitive("duration").getAsInt();
+                String professor = lecture.getAsJsonPrimitive("professor").getAsString();
+                String className = lecture.getAsJsonPrimitive("className").getAsString();
+                String todate = lecture.getAsJsonPrimitive("toDate").getAsString();
+
+                JsonObject term = jsonObject.getAsJsonObject("Term");
+                String date = term.getAsJsonPrimitive("date").getAsString();
+                String classroom = term.getAsJsonPrimitive("classroom").getAsString();
+                int startTime = term.getAsJsonPrimitive("startTime").getAsInt();
+
+                SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy");
+
+                Date startDate = dateFormat.parse(date);
+                Date toDate = dateFormat.parse(todate);
+                Calendar calendar = Calendar.getInstance();
+                calendar.setTime(startDate);
+
+                ClassLecture cl = new ClassLecture(className,professor,startTime,duration,startDate,null);
+
+                while(!(calendar.getTime().after(toDate))){
+                    for(Map.Entry<Term,ClassLecture> entry : schedule.getScheduleMap().entrySet()){
+                        for(int i = 0; i<duration; i++){
+                            if(entry.getKey().getDate().equals(calendar.getTime()) && entry.getKey().getClassroom().getName().equals(classroom)
+                                    && entry.getKey().getStartTime() == startTime+i)
+                            {
+                                schedule.getScheduleMap().put(entry.getKey(),cl);
+                            }
+                        }
+                    }
+
+                    calendar.add(Calendar.DAY_OF_MONTH, 7);
+                }
+                // Print the data
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
     }
 
