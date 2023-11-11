@@ -6,6 +6,8 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+
+import com.google.gson.Gson;
 import com.opencsv.CSVWriter;
 import rs.raf.classes.ClassLecture;
 import rs.raf.classes.Classroom;
@@ -346,16 +348,6 @@ public class Implementation2 implements ClassSchedule {
 
     }
 
-    private String formatDate(Date date){
-        Date dateFromUtilDate = date;
-
-        Instant instant = dateFromUtilDate.toInstant();
-        LocalDate localDate = instant.atZone(ZoneId.systemDefault()).toLocalDate();
-
-        String formattedDate = localDate.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"));
-
-        return formattedDate;
-    }
 
     @Override
     public void exportCSV(Schedule schedule, String filePath) {
@@ -512,22 +504,96 @@ public class Implementation2 implements ClassSchedule {
     }
 
     @Override
-    public void exportPDF(Schedule schedule, String s) {
+    public void exportPDF(Schedule schedule, String filePath) {
 
     }
 
     @Override
-    public void importPDF(Schedule schedule, String s) {
+    public void importPDF(Schedule schedule, String filePath) {
 
     }
 
     @Override
-    public void exportJSON(Schedule schedule, String s) {
+    public void exportJSON(Schedule schedule, String filePath) {
+        if(filePath.isEmpty()){
+            throw new FilePathException("Greska sa file lokacijom");
+        }
+        if(schedule.getScheduleMap().isEmpty()){
+            throw new ScheduleException("Pokusavate da exportujete prazan raspored");
+        }
+        try {
+            File directory = new File(filePath).getParentFile();
+            if (!directory.exists()) {
+                directory.mkdirs();
+            }
+            try (FileWriter writer = new FileWriter(filePath)) {
+                // Convert the entry set to a list of maps
+                List<Map<String, Object>> dataList = convertMapToListOfMaps(schedule.getScheduleMap());
 
+                new Gson().toJson(dataList, writer);
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+        }
     }
 
     @Override
-    public void importJSON(Schedule schedule, String s) {
+    public void importJSON(Schedule schedule, String filePath) {
 
+    }
+
+    private List<Map<String, Object>> convertMapToListOfMaps(Map<Term, ClassLecture> data) {
+        List<Map<String, Object>> result = new ArrayList<>();
+
+        for (Map.Entry<Term, ClassLecture> entry : data.entrySet()) {
+            if(entry.getValue()==null){
+                continue;
+            }
+            if(entry.getValue().getStartTime() != entry.getKey().getStartTime()){
+                continue;
+            }
+            Map<String,Object> map = new HashMap<>();
+
+            // adding term json
+            Term term = entry.getKey();
+
+            Map<String,Object> termDetails = new HashMap<>();
+
+            termDetails.put("classroom",term.getClassroom().getName());
+            termDetails.put("startTime",term.getStartTime());
+            termDetails.put("date",formatDate(term.getDate()));
+
+
+            // adding lecture to json map
+            ClassLecture classLecture = entry.getValue();
+
+
+            Map<String,Object> classLectureDetails = new HashMap<>();
+            classLectureDetails.put("className", classLecture.getClassName());
+            classLectureDetails.put("professor", classLecture.getProfessor());
+            classLectureDetails.put("duration", classLecture.getDuration());
+            classLectureDetails.put("toDate", formatDate(classLecture.getEndDate()));
+
+
+            map.put("ClassLecture", classLectureDetails);
+            map.put("Term",termDetails);
+
+
+            result.add(map);
+        }
+
+        return result;
+
+    }
+
+    private String formatDate(Date date){
+        Date dateFromUtilDate = date;
+
+        Instant instant = dateFromUtilDate.toInstant();
+        LocalDate localDate = instant.atZone(ZoneId.systemDefault()).toLocalDate();
+
+        String formattedDate = localDate.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"));
+
+        return formattedDate;
     }
 }
