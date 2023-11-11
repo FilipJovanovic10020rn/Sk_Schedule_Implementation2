@@ -522,7 +522,7 @@ public class Implementation2 implements ClassSchedule {
 //        Calendar calendar = Calendar.getInstance();
 //        calendar.setTime(startDate);
 //
-//        ClassLecture cl = new ClassLecture(className,professor,startTime,duration,startDate,null);
+//        ClassLecture cl = new ClassLecture(className,professor,startTime,duration,startDate,toDate);
 //
 //        while(!(calendar.getTime().after(toDate))){
 //            for(Map.Entry<Term,ClassLecture> entry : schedule.getScheduleMap().entrySet()){
@@ -597,7 +597,7 @@ public class Implementation2 implements ClassSchedule {
                 Calendar calendar = Calendar.getInstance();
                 calendar.setTime(startDate);
 
-                ClassLecture cl = new ClassLecture(className,professor,startTime,duration,startDate,null);
+                ClassLecture cl = new ClassLecture(className,professor,startTime,duration,startDate,toDate);
 
                 while(!(calendar.getTime().after(toDate))){
                     for(Map.Entry<Term,ClassLecture> entry : schedule.getScheduleMap().entrySet()){
