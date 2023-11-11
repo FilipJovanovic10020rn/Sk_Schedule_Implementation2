@@ -71,7 +71,8 @@ public class Main {
             classSchedule.removeClass(schedule,startDate,startDate,13,"Ucionica","SK");
            // classSchedule.removeClass(schedule,startDate,startDate,13,"Ucionica","SK");
 
-            classSchedule.importCSV(schedule,filePath);
+           // classSchedule.importCSV(schedule,filePath);
+            classSchedule.importJSON(schedule,filePath1);
 
 
 
