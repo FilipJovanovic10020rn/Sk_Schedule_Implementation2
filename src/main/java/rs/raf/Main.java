@@ -62,9 +62,11 @@ public class Main {
 
             String filePath = "src/test/resources/exported/testdata.csv";
             String filePath1 = "src/test/resources/exported/testdata.json";
+            String filePath2 = "src/test/resources/exported/testdata.pdf";
 
             classSchedule.exportCSV(schedule,filePath);
             classSchedule.exportJSON(schedule,filePath1);
+            classSchedule.exportPDF(schedule,filePath2);
 
             classSchedule.removeClass(schedule,startDate,startDate,13,"Ucionica","SK");
            // classSchedule.removeClass(schedule,startDate,startDate,13,"Ucionica","SK");

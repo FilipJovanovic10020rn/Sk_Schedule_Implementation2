@@ -9,6 +9,10 @@ import java.time.format.DateTimeFormatter;
 
 import com.google.gson.Gson;
 import com.opencsv.CSVWriter;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.PDPageContentStream;
+import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import rs.raf.classes.ClassLecture;
 import rs.raf.classes.Classroom;
 import rs.raf.classes.Schedule;
@@ -505,7 +509,51 @@ public class Implementation2 implements ClassSchedule {
 
     @Override
     public void exportPDF(Schedule schedule, String filePath) {
+        if(filePath.isEmpty()){
+            throw new FilePathException("Greska sa file lokacijom");
+        }
+        if(schedule.getScheduleMap().isEmpty()){
+            throw new ScheduleException("Pokusavate da exportujete prazan raspored");
+        }
+        try {
+            File directory = new File(filePath).getParentFile();
+            if (!directory.exists()) {
+                directory.mkdirs();
+            }
 
+            try(PDDocument document = new PDDocument()){
+
+                List<Map<String, Object>> dataList = convertMapToListOfMaps(schedule.getScheduleMap());
+
+                for(Map<String,Object> entry: dataList){
+                    PDPage page = new PDPage();
+                    document.addPage(page);
+
+
+                    try (PDPageContentStream contentStream = new PDPageContentStream(document, page)) {
+
+
+
+                        contentStream.beginText();
+                        contentStream.setFont(PDType1Font.HELVETICA_BOLD, 12); // Example font and size, adjust as needed
+                        contentStream.newLineAtOffset(100, 700);
+
+                        for (Map.Entry<String, Object> field : entry.entrySet()) {
+                            contentStream.showText(field.getKey() + ": " + field.getValue().toString());
+                            contentStream.newLineAtOffset(0, -20); // Adjust as needed
+                        }
+                        contentStream.endText();
+
+                    }
+                }
+                document.save(filePath);
+                System.out.println("PDF file exported successfully to: " + filePath);
+
+            }
+        }
+        catch (Exception e){
+            e.printStackTrace();
+        }
     }
 
     @Override
