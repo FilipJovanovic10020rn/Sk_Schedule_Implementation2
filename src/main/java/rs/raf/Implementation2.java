@@ -1,5 +1,12 @@
 package rs.raf;
 
+import java.io.*;
+import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import com.opencsv.CSVWriter;
 import rs.raf.classes.ClassLecture;
 import rs.raf.classes.Classroom;
 import rs.raf.classes.Schedule;
@@ -336,6 +343,191 @@ public class Implementation2 implements ClassSchedule {
             calendar2.add(Calendar.DAY_OF_MONTH, 7);
         }
 
+
+    }
+
+    private String formatDate(Date date){
+        Date dateFromUtilDate = date;
+
+        Instant instant = dateFromUtilDate.toInstant();
+        LocalDate localDate = instant.atZone(ZoneId.systemDefault()).toLocalDate();
+
+        String formattedDate = localDate.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"));
+
+        return formattedDate;
+    }
+
+    @Override
+    public void exportCSV(Schedule schedule, String filePath) {
+        if(filePath.isEmpty()){
+            throw new FilePathException("Greska sa file lokacijom");
+        }
+        if(schedule.getScheduleMap().isEmpty()){
+            throw new ScheduleException("Pokusavate da exportujete prazan raspored");
+        }
+
+        List<String[]> data = new ArrayList<>();
+        data.add(new String[]{"Naziv predavanja", "Profesor", "Ucionica", "Datum", "Vreme od", "Vreme do"});
+        //        "Naziv predavanja","Profesor","Ucionica","Datum od", "Datum do","Vreme od","Vreme do"
+
+
+        // todo sort
+        List<Term> termList = new ArrayList<>();
+        for(Map.Entry<Term,ClassLecture> entry : schedule.getScheduleMap().entrySet()){
+            termList.add(entry.getKey());
+        }
+        Collections.sort(termList, Comparator
+                .comparing(Term::getDate)
+                .thenComparing(Term::getStartTime)
+        );
+
+        for(Term t : termList){
+            if(schedule.getScheduleMap().get(t) == null){
+                continue;
+            }
+            ClassLecture classLecture = schedule.getScheduleMap().get(t);
+            if(t.getStartTime()==classLecture.getStartTime()){
+
+                // changing the date format
+//                Date dateFromUtilDate = t.getDate();
+//
+//                Instant instant = dateFromUtilDate.toInstant();
+//                LocalDate localDate = instant.atZone(ZoneId.systemDefault()).toLocalDate();
+//
+//                String formattedDate = localDate.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"));
+
+                String formattedDate1 = formatDate(t.getDate());
+                String formattedDate2 = formatDate(classLecture.getEndDate());
+
+                data.add(new String[]{classLecture.getClassName(), classLecture.getProfessor(), t.getClassroom().getName(),
+                        formattedDate1+ "-" + formattedDate2, t.getStartTime()+":00", (classLecture.getDuration()+t.getStartTime())+":00"});
+            }
+
+        }
+
+        try {
+
+            // Create directories if they don't exist
+            File directory = new File(filePath).getParentFile();
+            if (!directory.exists()) {
+                directory.mkdirs();
+            }
+
+            try (CSVWriter writer = new CSVWriter(new FileWriter(filePath))) {
+                // Writing all data to the CSV file
+                writer.writeAll(data); // ovo prima stringove
+
+
+
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        catch (Exception e){
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void importCSV(Schedule schedule, String filePath) {
+        int duration;
+        boolean flag = false;
+
+        try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
+            String line;
+
+            // Read the file line by line
+            while ((line = br.readLine()) != null) {
+                // Split the line by the CSV delimiter (comma, in this case)
+                String[] fields = line.split(",");
+
+                // Process the fields
+                for (int i = 0; i < fields.length; i++) {
+                    // Remove leading and trailing spaces and quotation marks
+                    //if
+                    fields[i] = fields[i].trim().replaceAll("^\"|\"$", "");
+                }
+                if(flag){
+
+                    SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy");
+
+
+                    String[] dates = fields[3].split("-");
+                    Date fromDate = dateFormat.parse(dates[0]);
+                    Date toDate = dateFormat.parse(dates[1]);
+
+                    String[] start = fields[4].split(":");
+                    String[] end = fields[5].split(":");
+                    int s = Integer.parseInt(start[0]);
+                    int e = Integer.parseInt(end[0]);
+                    duration = e-s;
+
+                    ClassLecture cl = new ClassLecture(fields[0],fields[1],s,duration,fromDate,toDate);
+
+                    Calendar calendar = Calendar.getInstance();
+                    calendar.setTime(fromDate);
+
+                    List<Term> termini = new ArrayList<>();
+
+
+                    while (!(calendar.getTime().after(toDate))){
+                        int count = 0;
+                        for(Map.Entry<Term,ClassLecture> entry : schedule.getScheduleMap().entrySet()){
+                            for(int i =0 ;i<duration; i++){
+                                if(entry.getKey().getDate().equals(calendar.getTime()) && entry.getKey().getClassroom().getName().equals(fields[2])
+                                        && entry.getKey().getStartTime() == s+i){
+                                    if(entry.getValue()==null){
+                                        count++;
+                                        termini.add(entry.getKey());
+                                    }
+                                }
+                                if(count==duration)
+                                    break;
+                            }
+                            if(count==duration) {
+                                if(termini.isEmpty()){
+                                    throw new InternalError("Greska u bazi");
+                                }
+                                for(Term t : termini){
+                                    schedule.getScheduleMap().put(t,cl);
+                                }
+                                break;
+                            }
+                        }
+                        termini.clear();
+                        calendar.add(Calendar.DAY_OF_MONTH, 7);
+
+                    }
+
+                }
+
+                flag=true;
+
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    @Override
+    public void exportPDF(Schedule schedule, String s) {
+
+    }
+
+    @Override
+    public void importPDF(Schedule schedule, String s) {
+
+    }
+
+    @Override
+    public void exportJSON(Schedule schedule, String s) {
+
+    }
+
+    @Override
+    public void importJSON(Schedule schedule, String s) {
 
     }
 }
