@@ -1,6 +1,7 @@
 package rs.raf;
 
 import java.io.*;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -16,6 +17,7 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
+import org.apache.pdfbox.text.PDFTextStripper;
 import rs.raf.classes.ClassLecture;
 import rs.raf.classes.Classroom;
 import rs.raf.classes.Schedule;
@@ -370,7 +372,6 @@ public class Implementation2 implements ClassSchedule {
         //        "Naziv predavanja","Profesor","Ucionica","Datum od", "Datum do","Vreme od","Vreme do"
 
 
-        // todo sort
         List<Term> termList = new ArrayList<>();
         for(Map.Entry<Term,ClassLecture> entry : schedule.getScheduleMap().entrySet()){
             termList.add(entry.getKey());
@@ -385,15 +386,9 @@ public class Implementation2 implements ClassSchedule {
                 continue;
             }
             ClassLecture classLecture = schedule.getScheduleMap().get(t);
-            if(t.getStartTime()==classLecture.getStartTime()){
 
-                // changing the date format
-//                Date dateFromUtilDate = t.getDate();
-//
-//                Instant instant = dateFromUtilDate.toInstant();
-//                LocalDate localDate = instant.atZone(ZoneId.systemDefault()).toLocalDate();
-//
-//                String formattedDate = localDate.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"));
+            if(t.getStartTime()==classLecture.getStartTime() && t.getDate().equals(classLecture.getStartDate())){
+
 
                 String formattedDate1 = formatDate(t.getDate());
                 String formattedDate2 = formatDate(classLecture.getEndDate());
@@ -559,33 +554,172 @@ public class Implementation2 implements ClassSchedule {
         }
     }
 
+    private Map<String,String> parsePdfContent(String content){
+        Map<String, String> resultMap = new HashMap<>();
+
+        // Split content into lines
+        String[] lines = content.split("\\r?\\n");
+
+        for (String line : lines) {
+            // Split each line into key and value based on ": "
+            String[] parts = line.split(": ", 2);
+
+            if (parts.length == 2) {
+                String key = parts[0].trim();
+                String value = parts[1].trim();
+
+                // Add key-value pair to the result map
+                resultMap.put(key, value);
+            }
+        }
+
+        return resultMap;
+    }
+
     @Override
     public void importPDF(Schedule schedule, String filePath) {
+        if(filePath.isEmpty()){
+            throw new FilePathException("Greska sa file lokacijom");
+        }
+        if(schedule.getScheduleMap().isEmpty()){
+            throw new ScheduleException("Morate da inicijalizujete raspored prvo");
+        }
+
+        File file = new File(filePath);
+        if(!file.exists()){
+            throw new FilePathException("File ne postoji");
+        }
+
+        List<Map<String,String>> result = new ArrayList<>();
+
+        try(PDDocument document = PDDocument.load(file)){
+            PDFTextStripper textStripper = new PDFTextStripper();
+
+            for (int i = 0; i < document.getNumberOfPages(); i++) {
+                textStripper.setStartPage(i + 1);
+                textStripper.setEndPage(i + 1);
+
+                try {
+                    String content = textStripper.getText(document);
+
+                    // Parse the content and extract data into a map
+                    // You need to customize this part based on your PDF structure
+                    Map<String, String> entry = parsePdfContent(content);
+
+                    result.add(entry);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+        for(Map<String, String> map : result){
+
+            String professorName = "";
+            String classLectureName = "";
+            int duration = 0;
+            Term term = null;
+            Date toDateOG = null;
+
+            for(Map.Entry<String,String> entry: map.entrySet()){
+
+                if(entry.getKey().toString().equals("ClassLecture")){
+
+                    String[] keyValuePairs = entry.getValue()
+                            .replaceAll("[{}]", "")
+                            .split(", ");
+
+                    Map<String, String> keyValueMap = new HashMap<>();
+                    for (String pair : keyValuePairs) {
+                        String[] single = pair.split("=");
+                        if (single.length == 2) {
+                            keyValueMap.put(single[0].trim(), single[1].trim());
+                        }
+                    }
+
+                    // Extract values from the map
+                    String durationString = keyValueMap.get("duration");
+                    String dateToString = keyValueMap.get("toDate");
+
+                    professorName = keyValueMap.get("professor");
+                    classLectureName = keyValueMap.get("className");
+                    duration = Integer.parseInt(durationString);
+
+                    SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy");
+                    Date date = null;
+                    try {
+                        date = dateFormat.parse(dateToString);
+                    } catch (ParseException e) {
+                        e.printStackTrace(); // Handle parsing exception
+                    }
+
+                    toDateOG = date;
+
+                }
+                else{
+                    String[] keyValuePairs = entry.getValue()
+                            .replaceAll("[{}]", "")
+                            .split(", ");
+
+                    Map<String, String> keyValueMap = new HashMap<>();
+                    for (String pair : keyValuePairs) {
+                        String[] single = pair.split("=");
+                        if (single.length == 2) {
+                            keyValueMap.put(single[0].trim(), single[1].trim());
+                        }
+                    }
+
+                    // Extract values from the map
+                    String dateString = keyValueMap.get("date");
+                    String classroomName = keyValueMap.get("classroom");
+                    String startTimeString = keyValueMap.get("startTime");
+
+                    // Parse date
+                    SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy");
+                    Date date = null;
+                    try {
+                        date = dateFormat.parse(dateString);
+                    } catch (ParseException e) {
+                        e.printStackTrace(); // Handle parsing exception
+                    }
+                    int startTime = Integer.parseInt(startTimeString);
+
+                    term = new Term(schedule.getClassroomByName(classroomName),startTime,date);
+
+                }
+            }
+            if(term == null || duration == 0 || classLectureName == "" || professorName == "" || toDateOG == null){
+//                throw new ImportingException("");
+            }
+            else{
 
 
-//        SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy");
-//
-//        Date startDate = dateFormat.parse(date);
-//        Date toDate = dateFormat.parse(todate);
-//        Calendar calendar = Calendar.getInstance();
-//        calendar.setTime(startDate);
-//
-//        ClassLecture cl = new ClassLecture(className,professor,startTime,duration,startDate,toDate);
-//
-//        while(!(calendar.getTime().after(toDate))){
-//            for(Map.Entry<Term,ClassLecture> entry : schedule.getScheduleMap().entrySet()){
-//                for(int i = 0; i<duration; i++){
-//                    if(entry.getKey().getDate().equals(calendar.getTime()) && entry.getKey().getClassroom().getName().equals(classroom)
-//                            && entry.getKey().getStartTime() == startTime+i)
-//                    {
-//                        schedule.getScheduleMap().put(entry.getKey(),cl);
-//                    }
-//                }
-//            }
-//
-//            calendar.add(Calendar.DAY_OF_MONTH, 7);
-//        }
+                Date startDate = term.getDate();
+                Date toDate = toDateOG;
 
+                Calendar calendar = Calendar.getInstance();
+                calendar.setTime(startDate);
+
+                ClassLecture cl = new ClassLecture(classLectureName,professorName,term.getStartTime(),duration,startDate,toDate);
+
+                while(!(calendar.getTime().after(toDate))){
+                    for(Map.Entry<Term,ClassLecture> entry : schedule.getScheduleMap().entrySet()){
+                        for(int i = 0; i<duration; i++){
+                            if(entry.getKey().getDate().equals(calendar.getTime()) && entry.getKey().getClassroom().getName().equals(term.getClassroom().getName())
+                                    && entry.getKey().getStartTime() == term.getStartTime()+i)
+                            {
+                                schedule.getScheduleMap().put(entry.getKey(),cl);
+                            }
+                        }
+                    }
+
+                    calendar.add(Calendar.DAY_OF_MONTH, 7);
+                }
+
+            }
+        }
+        System.out.println("Finished importing file");
     }
 
     @Override
@@ -672,41 +806,47 @@ public class Implementation2 implements ClassSchedule {
     private List<Map<String, Object>> convertMapToListOfMaps(Map<Term, ClassLecture> data) {
         List<Map<String, Object>> result = new ArrayList<>();
 
+
+
         for (Map.Entry<Term, ClassLecture> entry : data.entrySet()) {
-            if(entry.getValue()==null){
+            if (entry.getValue() == null) {
                 continue;
             }
-            if(entry.getValue().getStartTime() != entry.getKey().getStartTime()){
+            if (entry.getValue().getStartTime() != entry.getKey().getStartTime()) {
                 continue;
             }
-            Map<String,Object> map = new HashMap<>();
-
-            // adding term json
-            Term term = entry.getKey();
-
-            Map<String,Object> termDetails = new HashMap<>();
-
-            termDetails.put("classroom",term.getClassroom().getName());
-            termDetails.put("startTime",term.getStartTime());
-            termDetails.put("date",formatDate(term.getDate()));
+            if (entry.getKey().getDate().equals(entry.getValue().getStartDate())) {
 
 
-            // adding lecture to json map
-            ClassLecture classLecture = entry.getValue();
+                Map<String, Object> map = new HashMap<>();
+
+                // adding term json
+                Term term = entry.getKey();
+
+                Map<String, Object> termDetails = new HashMap<>();
+
+                termDetails.put("classroom", term.getClassroom().getName());
+                termDetails.put("startTime", term.getStartTime());
+                termDetails.put("date", formatDate(term.getDate()));
 
 
-            Map<String,Object> classLectureDetails = new HashMap<>();
-            classLectureDetails.put("className", classLecture.getClassName());
-            classLectureDetails.put("professor", classLecture.getProfessor());
-            classLectureDetails.put("duration", classLecture.getDuration());
-            classLectureDetails.put("toDate", formatDate(classLecture.getEndDate()));
+                // adding lecture to json map
+                ClassLecture classLecture = entry.getValue();
 
 
-            map.put("ClassLecture", classLectureDetails);
-            map.put("Term",termDetails);
+                Map<String, Object> classLectureDetails = new HashMap<>();
+                classLectureDetails.put("className", classLecture.getClassName());
+                classLectureDetails.put("professor", classLecture.getProfessor());
+                classLectureDetails.put("duration", classLecture.getDuration());
+                classLectureDetails.put("toDate", formatDate(classLecture.getEndDate()));
 
 
-            result.add(map);
+                map.put("ClassLecture", classLectureDetails);
+                map.put("Term", termDetails);
+
+
+                result.add(map);
+            }
         }
 
         return result;
