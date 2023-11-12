@@ -20,6 +20,7 @@
             <groupId>rs.raf</groupId>
             <artifactId>Schedule_Specification</artifactId>
             <version>1.2-SNAPSHOT</version>
+            <scope>compile</scope>
         </dependency>
     </dependencies>
 </project>
